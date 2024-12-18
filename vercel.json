@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "src": "/api/submit-form",
+      "methods": ["POST", "OPTIONS"],
+      "dest": "/api/submit-form.js"
+    }
+  ],
+  "functions": {
+    "api/submit-form.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
+}

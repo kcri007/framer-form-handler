@@ -1,6 +1,6 @@
 // pages/api/submit-form.js
 export default async function handler(req, res) {
-  console.log('Starting outbound call request...');
+  console.log('Starting direct outbound call request...');
   
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -21,46 +21,26 @@ export default async function handler(req, res) {
       'x-bland-org-id': process.env.BLAND_ORG_ID
     };
 
-    const prompt = `You are Jean, a health assistant at Nutriva Health making an outbound call. Your task is to:
-1. Confirm you're speaking with ${name}
-2. Introduce yourself as Jean from Nutriva Health
-3. Explain you're calling because they submitted an inquiry through the website
-4. Ask how you can assist them today
-5. Be professional, friendly, and helpful throughout the conversation
-
-Remember:
-- Speak naturally and conversationally
-- Listen carefully to their needs
-- Take notes of their requirements
-- Be patient and clear in your communication`;
-
     const blandAiData = {
       phone_number: phone,
-      task: prompt,
+      task: `You are Jean, a health assistant at Nutriva Health. You are calling ${name} because they submitted an inquiry through our website. Start by confirming you're speaking with them, then ask how you can help them today. Be professional and friendly.`,
       model: "gpt-4",
+      first_sentence: `Hello, may I speak with ${name}? This is Jean from Nutriva Health.`,
       language: language === 'Spanish' ? 'es-ES' : 'en-US',
       voice: language === 'Spanish' ? 'elena' : 'josh',
-      pathway_id: process.env.BLAND_PATHWAY_ID,
-      first_sentence: `Hello, may I speak with ${name}? This is Jean from Nutriva Health.`,
       max_duration: 300,
-      wait_for_greeting: true,
-      immediate: true,
-      type: "outbound",
-      background_track: null,
-      tools: [],
+      temperature: 0.7,
       metadata: {
         name,
         email,
-        phone,
         language,
-        source: 'website_inquiry',
-        call_type: 'outbound'
+        source: 'website_inquiry'
       }
     };
 
-    console.log('Sending outbound call request to Bland.ai...');
+    console.log('Sending direct call request to Bland.ai...');
 
-    const response = await fetch('https://api.bland.ai/v1/calls', {
+    const response = await fetch('https://api.bland.ai/v1/call', {
       method: 'POST',
       headers,
       body: JSON.stringify(blandAiData)
@@ -76,8 +56,8 @@ Remember:
 
     return res.status(200).json({
       success: true,
-      message: 'Outbound call initiated successfully',
-      call_id: data.call?.id || data.agent?.id
+      message: 'Call initiated successfully',
+      call_id: data.call_id || data.id
     });
 
   } catch (error) {

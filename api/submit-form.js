@@ -1,47 +1,19 @@
 // pages/api/submit-form.js
 export default async function handler(req, res) {
-  // Enable CORS
+  console.log('Starting outbound call request...');
+  
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed. Use POST.' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    // Log raw request body
-    console.log('Raw request body:', req.body);
-
-    const { 
-      name, 
-      phone, 
-      email,
-      language 
-    } = req.body;
-
-    // Log parsed values
-    console.log('Parsed form values:', {
-      name,
-      phone,
-      email,
-      language,
-      apiKey: process.env.BLAND_AI_API_KEY ? 'Present' : 'Missing',
-      orgId: process.env.BLAND_ORG_ID ? 'Present' : 'Missing',
-      pathwayId: process.env.BLAND_PATHWAY_ID ? 'Present' : 'Missing'
-    });
-
-    // Additional validation for phone number format
-    const formattedPhone = phone.startsWith('+') ? phone : `+${phone}`;
+    const { name, phone, email, language } = req.body;
     
-    if (!/^\+?[1-9]\d{1,14}$/.test(formattedPhone)) {
-      console.error('Invalid phone format:', formattedPhone);
-      return res.status(400).json({ error: 'Invalid phone number format. Must include country code.' });
-    }
+    console.log('Processing request for:', { name, email, language, phone: '[REDACTED]' });
 
     const headers = {
       'Content-Type': 'application/json',
@@ -49,71 +21,67 @@ export default async function handler(req, res) {
       'x-bland-org-id': process.env.BLAND_ORG_ID
     };
 
+    const prompt = `You are Jean, a health assistant at Nutriva Health making an outbound call. Your task is to:
+1. Confirm you're speaking with ${name}
+2. Introduce yourself as Jean from Nutriva Health
+3. Explain you're calling because they submitted an inquiry through the website
+4. Ask how you can assist them today
+5. Be professional, friendly, and helpful throughout the conversation
+
+Remember:
+- Speak naturally and conversationally
+- Listen carefully to their needs
+- Take notes of their requirements
+- Be patient and clear in your communication`;
+
     const blandAiData = {
-      phone_number: formattedPhone,
-      task: `You're Jean, a health assistant at Nutriva Health. You're calling ${name} who just submitted an inquiry through our website. Start by confirming their name and ask how you can help them today.`,
+      phone_number: phone,
+      task: prompt,
       model: "gpt-4",
       language: language === 'Spanish' ? 'es-ES' : 'en-US',
       voice: language === 'Spanish' ? 'elena' : 'josh',
       pathway_id: process.env.BLAND_PATHWAY_ID,
       first_sentence: `Hello, may I speak with ${name}? This is Jean from Nutriva Health.`,
       max_duration: 300,
-      background_track: "office",
       wait_for_greeting: true,
-      timezone: "America/New_York",
+      immediate: true,
+      type: "outbound",
+      background_track: null,
       tools: [],
-      dynamic_data: {},
       metadata: {
         name,
         email,
-        phone: formattedPhone,
+        phone,
         language,
         source: 'website_inquiry',
-        submission_timestamp: new Date().toISOString()
+        call_type: 'outbound'
       }
     };
 
-    console.log('Sending to Bland.ai:', JSON.stringify(blandAiData, null, 2));
+    console.log('Sending outbound call request to Bland.ai...');
 
-    const response = await fetch('https://api.bland.ai/v1/agents', {
+    const response = await fetch('https://api.bland.ai/v1/calls', {
       method: 'POST',
       headers,
       body: JSON.stringify(blandAiData)
     });
 
     const data = await response.json();
-    
-    // Log full response from Bland.ai
-    console.log('Full Bland.ai response:', JSON.stringify(data, null, 2));
+    console.log('Bland.ai response:', JSON.stringify(data, null, 2));
 
     if (!response.ok) {
       console.error('Bland.ai API Error:', data);
-      return res.status(response.status).json({ 
-        error: data.message || 'Bland.ai API request failed.' 
-      });
-    }
-
-    // Verify call initiation
-    if (!data.agent || !data.agent.id) {
-      console.error('Call not initiated properly:', data);
-      return res.status(500).json({ 
-        error: 'Call creation failed - no agent ID returned' 
-      });
+      return res.status(response.status).json({ error: data.message });
     }
 
     return res.status(200).json({
-      message: 'Call request successfully processed.',
-      data: {
-        ...data,
-        name,
-        phone: formattedPhone,
-        email,
-        language
-      }
+      success: true,
+      message: 'Outbound call initiated successfully',
+      call_id: data.call?.id || data.agent?.id
     });
 
   } catch (error) {
-    console.error('Unexpected Error:', error);
-    return res.status(500).json({ error: `Internal Server Error: ${error.message}` });
+    console.error('Error:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }

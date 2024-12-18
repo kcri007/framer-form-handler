@@ -1,5 +1,4 @@
 // pages/api/submit-form.js
-
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,21 +16,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse and validate request body
+    // Parse webhook data from Framer form
     const { 
       name, 
       phone, 
-      language, 
-      pathway_id, 
-      model, 
-      first_sentence,
-      appointmentTime 
+      email,
+      language 
     } = req.body;
 
     // Validate required fields
-    if (!name || !phone || !language || !pathway_id || !model || !first_sentence) {
+    if (!name || !phone || !email || !language) {
       return res.status(400).json({
-        error: 'Missing required fields: name, phone, language, pathway_id, model, or first_sentence.'
+        error: 'Missing required fields: name, phone, email, or language.'
       });
     }
 
@@ -49,24 +45,24 @@ export default async function handler(req, res) {
 
     const blandAiData = {
       phone_number: phone,
-      task: `You're Jean, a health assistant at Nutriva Health. You're calling ${name} to confirm their upcoming appointment${appointmentTime ? ` at ${appointmentTime}` : ''}. Start by confirming their name and whether they can attend. If they need to reschedule, offer alternative times and help them find a suitable slot.`,
-      model: model,
+      task: `You're Jean, a health assistant at Nutriva Health. You're calling ${name} who just submitted an inquiry through our website. Start by confirming their name and ask how you can help them today.`,
+      model: "gpt-4",
       language: language === 'Spanish' ? 'es-ES' : 'en-US',
       voice: language === 'Spanish' ? 'elena' : 'josh',
-      pathway_id: pathway_id,
-      first_sentence: first_sentence,
+      pathway_id: process.env.BLAND_PATHWAY_ID,
+      first_sentence: `Hello, may I speak with ${name}? This is Jean from Nutriva Health.`,
       max_duration: 300,
       background_track: "office",
       wait_for_greeting: false,
       timezone: "America/New_York",
-      tools: [{}],
+      tools: [],
       dynamic_data: {},
-      interruption_threshold: 123,
-      keywords: ['callback', 'conversation'],
       metadata: {
-        patient_name: name,
-        appointment_time: appointmentTime,
-        language: language
+        name,
+        email,
+        phone,
+        language,
+        source: 'website_inquiry'
       }
     };
 
@@ -78,7 +74,7 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-
+    
     if (!response.ok) {
       console.error('Bland.ai API Error:', data);
       return res.status(response.status).json({ 
@@ -88,19 +84,18 @@ export default async function handler(req, res) {
 
     // Return successful response
     return res.status(200).json({
-      message: 'Request successfully processed.',
+      message: 'Call request successfully processed.',
       data: {
         ...data,
         name,
         phone,
-        language,
-        appointmentTime,
-        callType: 'appointment_confirmation'
+        email,
+        language
       }
     });
 
   } catch (error) {
-    console.error('Unexpected Error:', error.message);
+    console.error('Unexpected Error:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 }

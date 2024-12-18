@@ -1,6 +1,6 @@
 // pages/api/submit-form.js
 export default async function handler(req, res) {
-  console.log('Starting direct outbound call request...');
+  console.log('Starting outbound call request...');
   
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -38,13 +38,25 @@ export default async function handler(req, res) {
       }
     };
 
-    console.log('Sending direct call request to Bland.ai...');
+    // Log request details (excluding sensitive data)
+    console.log('Request config:', {
+      url: 'https://api.bland.ai/v1/calls',
+      method: 'POST',
+      headers: {
+        'Content-Type': headers['Content-Type'],
+        'x-bland-org-id': '[PRESENT]',
+        'Authorization': '[PRESENT]'
+      }
+    });
 
-    const response = await fetch('https://api.bland.ai/v1/call', {
+    const response = await fetch('https://api.bland.ai/v1/calls', {
       method: 'POST',
       headers,
       body: JSON.stringify(blandAiData)
     });
+
+    console.log('Response status:', response.status);
+    console.log('Response status text:', response.statusText);
 
     const data = await response.json();
     console.log('Bland.ai response:', JSON.stringify(data, null, 2));
@@ -61,7 +73,13 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack
+    });
+    return res.status(500).json({ 
+      error: 'Internal Server Error',
+      details: error.message 
+    });
   }
 }

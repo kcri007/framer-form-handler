@@ -27,7 +27,7 @@ export default async function handler(req, res) {
       task: `You are Jean, a health assistant at Nutriva Health. You are calling ${name} because they submitted an inquiry through our website. Start by confirming you're speaking with them, then ask how you can help them today. Be professional and friendly.`,
       first_sentence: `Hello, may I speak with ${name}? This is Jean from Nutriva Health.`,
       language: language === 'Spanish' ? 'es-ES' : 'en-US',
-      voice: language === 'Spanish' ? 'elena' : 'josh',
+      voice: language === 'Spanish' ? 'elena' : 'jane',
       max_duration: 300,
       temperature: 0.7,
       pathway_id: process.env.BLAND_PATHWAY_ID,

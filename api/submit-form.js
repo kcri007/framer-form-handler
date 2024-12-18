@@ -1,24 +1,22 @@
 // pages/api/submit-form.js
 export default async function handler(req, res) {
-  // Enable CORS for Framer
-  res.setHeader('Access-Control-Allow-Origin', 'https://framer.com');
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Handle preflight requests from Framer
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  // Allow only POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed. Use POST.' });
   }
 
   try {
-    console.log('Received webhook data:', req.body); // Debug incoming data
+    // Log raw request body
+    console.log('Raw request body:', req.body);
 
-    // Parse webhook data from Framer form
     const { 
       name, 
       phone, 
@@ -26,18 +24,25 @@ export default async function handler(req, res) {
       language 
     } = req.body;
 
-    // Log the parsed data
-    console.log('Parsed form data:', { name, phone, email, language });
+    // Log parsed values
+    console.log('Parsed form values:', {
+      name,
+      phone,
+      email,
+      language,
+      apiKey: process.env.BLAND_AI_API_KEY ? 'Present' : 'Missing',
+      orgId: process.env.BLAND_ORG_ID ? 'Present' : 'Missing',
+      pathwayId: process.env.BLAND_PATHWAY_ID ? 'Present' : 'Missing'
+    });
 
-    // Validate required fields
-    if (!name || !phone || !email || !language) {
-      console.log('Missing required fields:', { name, phone, email, language });
-      return res.status(400).json({
-        error: 'Missing required fields: name, phone, email, or language.'
-      });
+    // Additional validation for phone number format
+    const formattedPhone = phone.startsWith('+') ? phone : `+${phone}`;
+    
+    if (!/^\+?[1-9]\d{1,14}$/.test(formattedPhone)) {
+      console.error('Invalid phone format:', formattedPhone);
+      return res.status(400).json({ error: 'Invalid phone number format. Must include country code.' });
     }
 
-    // Configure Bland.ai API request
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${process.env.BLAND_AI_API_KEY}`,
@@ -45,7 +50,7 @@ export default async function handler(req, res) {
     };
 
     const blandAiData = {
-      phone_number: phone,
+      phone_number: formattedPhone,
       task: `You're Jean, a health assistant at Nutriva Health. You're calling ${name} who just submitted an inquiry through our website. Start by confirming their name and ask how you can help them today.`,
       model: "gpt-4",
       language: language === 'Spanish' ? 'es-ES' : 'en-US',
@@ -54,23 +59,22 @@ export default async function handler(req, res) {
       first_sentence: `Hello, may I speak with ${name}? This is Jean from Nutriva Health.`,
       max_duration: 300,
       background_track: "office",
-      wait_for_greeting: false,
+      wait_for_greeting: true,
       timezone: "America/New_York",
       tools: [],
       dynamic_data: {},
       metadata: {
         name,
         email,
-        phone,
+        phone: formattedPhone,
         language,
         source: 'website_inquiry',
         submission_timestamp: new Date().toISOString()
       }
     };
 
-    console.log('Sending request to Bland.ai:', blandAiData); // Debug outgoing data
+    console.log('Sending to Bland.ai:', JSON.stringify(blandAiData, null, 2));
 
-    // Send request to Bland.ai
     const response = await fetch('https://api.bland.ai/v1/agents', {
       method: 'POST',
       headers,
@@ -78,8 +82,10 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    console.log('Bland.ai response:', data); // Debug API response
     
+    // Log full response from Bland.ai
+    console.log('Full Bland.ai response:', JSON.stringify(data, null, 2));
+
     if (!response.ok) {
       console.error('Bland.ai API Error:', data);
       return res.status(response.status).json({ 
@@ -87,13 +93,20 @@ export default async function handler(req, res) {
       });
     }
 
-    // Return successful response to Framer
+    // Verify call initiation
+    if (!data.agent || !data.agent.id) {
+      console.error('Call not initiated properly:', data);
+      return res.status(500).json({ 
+        error: 'Call creation failed - no agent ID returned' 
+      });
+    }
+
     return res.status(200).json({
       message: 'Call request successfully processed.',
       data: {
         ...data,
         name,
-        phone,
+        phone: formattedPhone,
         email,
         language
       }
@@ -101,6 +114,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Unexpected Error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: `Internal Server Error: ${error.message}` });
   }
 }

@@ -24,7 +24,6 @@ export default async function handler(req, res) {
     const blandAiData = {
       phone_number: phone,
       task: `You are Jean, a health assistant at Nutriva Health. You are calling ${name} because they submitted an inquiry through our website. Start by confirming you're speaking with them, then ask how you can help them today. Be professional and friendly.`,
-      model: "gpt-4",
       first_sentence: `Hello, may I speak with ${name}? This is Jean from Nutriva Health.`,
       language: language === 'Spanish' ? 'es-ES' : 'en-US',
       voice: language === 'Spanish' ? 'elena' : 'josh',
@@ -39,14 +38,9 @@ export default async function handler(req, res) {
     };
 
     // Log request details (excluding sensitive data)
-    console.log('Request config:', {
-      url: 'https://api.bland.ai/v1/calls',
-      method: 'POST',
-      headers: {
-        'Content-Type': headers['Content-Type'],
-        'x-bland-org-id': '[PRESENT]',
-        'Authorization': '[PRESENT]'
-      }
+    console.log('Request payload:', {
+      ...blandAiData,
+      phone_number: '[REDACTED]'
     });
 
     const response = await fetch('https://api.bland.ai/v1/calls', {

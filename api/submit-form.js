@@ -1,6 +1,6 @@
 // pages/api/submit-form.js
 export default async function handler(req, res) {
-  console.log('Starting outbound call request...');
+  console.log('Starting outbound call request with pathway...');
   
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,6 +14,7 @@ export default async function handler(req, res) {
     const { name, phone, email, language } = req.body;
     
     console.log('Processing request for:', { name, email, language, phone: '[REDACTED]' });
+    console.log('Using pathway ID:', process.env.BLAND_PATHWAY_ID);
 
     const headers = {
       'Content-Type': 'application/json',
@@ -29,18 +30,21 @@ export default async function handler(req, res) {
       voice: language === 'Spanish' ? 'elena' : 'josh',
       max_duration: 300,
       temperature: 0.7,
+      pathway_id: process.env.BLAND_PATHWAY_ID,
       metadata: {
         name,
         email,
         language,
-        source: 'website_inquiry'
+        source: 'website_inquiry',
+        submission_time: new Date().toISOString()
       }
     };
 
     // Log request details (excluding sensitive data)
     console.log('Request payload:', {
       ...blandAiData,
-      phone_number: '[REDACTED]'
+      phone_number: '[REDACTED]',
+      pathway_id: '[PRESENT]'
     });
 
     const response = await fetch('https://api.bland.ai/v1/calls', {
@@ -62,8 +66,9 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: 'Call initiated successfully',
-      call_id: data.call_id || data.id
+      message: 'Call initiated successfully with pathway',
+      call_id: data.call_id || data.id,
+      pathway_id: process.env.BLAND_PATHWAY_ID
     });
 
   } catch (error) {

@@ -1,70 +1,78 @@
-export const config = {
-  runtime: 'edge'
-};
-
-export default async function handler(request) {
+// api/submit-form.js
+export default async function handler(req, res) {
   // Enable CORS
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
-    });
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight request
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
 
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+  // Only allow POST requests
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const body = await request.json();
-    const { name, phone, language } = body;
+    const { name, phone, language } = req.body;
 
-    // Call Bland.ai API
-    const response = await fetch('https://api.bland.ai/v1/calls', {
+    // Configure voice settings based on language selection
+    let voiceConfig;
+    if (language === 'Spanish') {
+      voiceConfig = {
+        name: 'elena',
+        language: 'es-ES'
+      };
+    } else {
+      voiceConfig = {
+        name: 'josh',
+        language: 'en-US'
+      };
+    }
+
+    // Configure greeting based on language
+    let greeting;
+    if (language === 'Spanish') {
+      greeting = `Hola ${name}, ¿cómo puedo ayudarte hoy?`;
+    } else {
+      greeting = `Hello ${name}, how can I assist you today?`;
+    }
+
+    // Call Bland.ai Web Agent API
+    const response = await fetch('https://api.bland.ai/v1/agents', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.BLAND_AI_API_KEY}`
       },
       body: JSON.stringify({
+        model: "enhanced",
+        voice: voiceConfig,
+        name: "Customer Service Agent",
+        first_sentence: greeting,
+        knowledge_data: {
+          role: "You are a helpful customer service representative",
+          purpose: "Help customers with their inquiries",
+          company_info: "We provide AI voice agent services"
+        },
         phone_number: phone,
-        task: `Call ${name} and speak to them in ${language}`,
-        reduce_latency: true,
-        answer_immediately: true,
-        voice: {
-          name: language === 'Spanish' ? 'elena' : 'josh',
-          language: language === 'Spanish' ? 'es-ES' : 'en-US'
-        }
+        max_duration: 300,
+        temperature: 0.7,
+        interrupt_threshold: 0.7
       })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Failed to initiate call');
+      throw new Error(data.message || 'Failed to create web agent');
     }
 
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+    return res.status(200).json(data);
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+    console.error('Error:', error);
+    return res.status(500).json({ error: error.message });
   }
 }

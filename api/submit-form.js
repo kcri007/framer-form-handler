@@ -1,11 +1,11 @@
 // pages/api/submit-form.js
 export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Enable CORS for Framer
+  res.setHeader('Access-Control-Allow-Origin', 'https://framer.com');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Handle preflight requests
+  // Handle preflight requests from Framer
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -16,6 +16,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('Received webhook data:', req.body); // Debug incoming data
+
     // Parse webhook data from Framer form
     const { 
       name, 
@@ -24,16 +26,15 @@ export default async function handler(req, res) {
       language 
     } = req.body;
 
+    // Log the parsed data
+    console.log('Parsed form data:', { name, phone, email, language });
+
     // Validate required fields
     if (!name || !phone || !email || !language) {
+      console.log('Missing required fields:', { name, phone, email, language });
       return res.status(400).json({
         error: 'Missing required fields: name, phone, email, or language.'
       });
-    }
-
-    // Validate phone number format
-    if (!/^\+?[1-9]\d{1,14}$/.test(phone)) {
-      return res.status(400).json({ error: 'Invalid phone number format.' });
     }
 
     // Configure Bland.ai API request
@@ -62,11 +63,14 @@ export default async function handler(req, res) {
         email,
         phone,
         language,
-        source: 'website_inquiry'
+        source: 'website_inquiry',
+        submission_timestamp: new Date().toISOString()
       }
     };
 
-    // Send request to Bland.ai and await response
+    console.log('Sending request to Bland.ai:', blandAiData); // Debug outgoing data
+
+    // Send request to Bland.ai
     const response = await fetch('https://api.bland.ai/v1/agents', {
       method: 'POST',
       headers,
@@ -74,6 +78,7 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+    console.log('Bland.ai response:', data); // Debug API response
     
     if (!response.ok) {
       console.error('Bland.ai API Error:', data);
@@ -82,7 +87,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // Return successful response
+    // Return successful response to Framer
     return res.status(200).json({
       message: 'Call request successfully processed.',
       data: {

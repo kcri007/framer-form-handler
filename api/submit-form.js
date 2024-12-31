@@ -25,10 +25,10 @@ export default async function handler(req, res) {
     const blandAiData = {
       phone_number: phone,
       from: "+14012718355",
-      task: `Your name is Caroline and you are a AI Agent who's purpose is to demonstrate and sell the value of AI Calling Agents. You are calling ${name} who initiated a call request from a web form on the Telgent.AI website in order to experience for the first time what it's like to have a conversation with an AI Calling Agent.`,
-      first_sentence: `Heappy New Year! My name is Caroline and I'm calling from Telgent AI per your request. May I speak with ${name}?`,
+      task: `Your name is Cory and you are a AI Agent who's purpose is to demonstrate and sell the value of AI Calling Agents. You are calling ${name} who initiated a call request from a web form on the Telgent.AI website in order to experience for the first time what it's like to have a conversation with an AI Calling Agent.`,
+      first_sentence: `Heappy New Year! My name is Cory and I'm calling from Telgent AI per your request. May I speak with ${name}?`,
       language: language === 'Spanish' ? 'es-ES' : 'en-US',
-      voice: language === 'Spanish' ? 'elena' : 'maya',
+      voice: language === 'Spanish' ? 'elena' : 'dave',
       max_duration: 300,
       temperature: 0.7,
       pathway_id: process.env.BLAND_PATHWAY_ID,

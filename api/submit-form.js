@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+  
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
@@ -16,17 +16,17 @@ export default async function handler(req, res) {
     console.log('Processing request for:', { name, email, language, phone: '[REDACTED]' });
     console.log('Using pathway ID:', process.env.BLAND_PATHWAY_ID);
 
+    // Modified headers - removed x-bland-org-id
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.BLAND_AI_API_KEY}`,
-      'x-bland-org-id': process.env.BLAND_ORG_ID
+      'Authorization': `Bearer ${process.env.BLAND_AI_API_KEY}`
     };
 
     const blandAiData = {
       phone_number: phone,
       from: "+14012718355",
       task: `Your name is Cory and you are a AI Agent who's purpose is to demonstrate and sell the value of AI Calling Agents. You are calling ${name} who initiated a call request from a web form on the Telgent.AI website in order to experience for the first time what it's like to have a conversation with an AI Calling Agent.`,
-      first_sentence: `Heappy New Year! My name is Cory and I'm calling from Telgent AI per your request. May I speak with ${name}?`,
+      first_sentence: `Happy New Year! My name is Cory and I'm calling from Telgent AI per your request. May I speak with ${name}?`,
       language: language === 'Spanish' ? 'es-ES' : 'en-US',
       voice: language === 'Spanish' ? 'elena' : 'david',
       max_duration: 300,
@@ -71,7 +71,6 @@ export default async function handler(req, res) {
       call_id: data.call_id || data.id,
       pathway_id: process.env.BLAND_PATHWAY_ID
     });
-
   } catch (error) {
     console.error('Error details:', {
       message: error.message,

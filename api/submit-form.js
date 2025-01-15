@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${process.env.BLAND_AI_API_KEY}`,
-      'X-Encryption-Key': process.env.ENCRYPTED_KEY
+      'Encrypted-Key': process.env.ENCRYPTED_KEY
     };
 
     const blandAiData = {

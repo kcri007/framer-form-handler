@@ -17,9 +17,9 @@ export default async function handler(req, res) {
     console.log('Using pathway ID:', process.env.BLAND_PATHWAY_ID);
 
     const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.BLAND_AI_API_KEY}`,
-      'Encrypted-Key': process.env.ENCRYPTED_KEY
+      authorization: process.env.BLAND_AI_API_KEY,
+      encrypted_key: process.env.ENCRYPTED_KEY,
+      'Content-Type': 'application/json'
     };
 
     const blandAiData = {
